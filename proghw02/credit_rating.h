@@ -2,7 +2,9 @@
  * credit_rating.h - Struct and function prototypes for credit rating program
  *
  * Author: Jacob Johnson
+ * Date: 10/09/2024
  *
+ * Assignment: HW-Prog02
  * Course: CSCI 356
  * Version 1.0
  */

@@ -2,7 +2,9 @@
  * credit_rating.c - Program to manage and process credit ratings using a queue
  *
  * Author: Jacob Johnson
+ * Date: 10/09/2024 
  *
+ * Assignment: HW-Prog02
  * Course: CSCI 356
  * Version 1.0
  */
@@ -22,7 +24,7 @@ int GetMaxRating(queue q) {
 
     // Iterate through the queue and find the maximum credit rating
     while (current != NULL) {
-        CreditRating* person = (CreditRating*)current->contents;
+        CreditRating* person = (CreditRating*)current->contents; 
         if (person->creditRating > max_rating) {
             max_rating = person->creditRating;
         }

@@ -3,7 +3,9 @@
  *
  * Author: clintf
  * Student Name: Jacob Johnson
+ * Date: 10/09/2024
  *
+ * Assignment: HW-Prog02
  * Course: CSCI 356
  * Version 1.0
  */

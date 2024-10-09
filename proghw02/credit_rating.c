@@ -20,6 +20,7 @@ int GetMaxRating(queue q) {
     int max_rating = 0;
     q_element* current = q->front;
 
+    // Iterate through the queue and find the maximum credit rating
     while (current != NULL) {
         CreditRating* person = (CreditRating*)current->contents;
         if (person->creditRating > max_rating) {
@@ -45,6 +46,7 @@ void ProcessCreditRating(queue q) {
 
     printf("Name   Rating    Distance\n");
 
+    // While the queue is not empty, dequeue and process each person
     while (!isempty(q)) {
         CreditRating* person = (CreditRating*)dequeue(q);
         PrintCreditRating(person, max_rating);
@@ -54,7 +56,7 @@ void ProcessCreditRating(queue q) {
     }
 
     if (count > 0) {
-        printf("Average: %d\n", total / count);
+        printf("Average Credit Rating: %d\n", total / count);
     }
 }
 
@@ -66,7 +68,7 @@ int main() {
     int rating;
 
     // Explain the input and prompt the user
-    printf("Enter credit rating information (Name Rating). Press enter on a blank line to finish:\n");
+    printf("Enter credit rating information seperated by a space (Name Rating). Press enter on a blank line to finish:\n");
 
     // Loop to read input and enqueue it
     while (1) {
@@ -76,10 +78,11 @@ int main() {
 
         // Check for blank line to terminate input
         if (strcmp(input, "\n") == 0) {
+            printf("\nProcessing credit ratings...\n");
             break;
         }
 
-        // Parse input
+        // Parse input with sscanf to seperate name and rating
         char name[MAX_NAME_LENGTH];
         sscanf(input, "%s %d", name, &rating);
 

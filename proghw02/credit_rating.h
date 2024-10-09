@@ -27,17 +27,16 @@ typedef struct {
 void PrintCreditRating(CreditRating* person, int max_rating);
 
 /*
- * checks the status of a queue
+ * Iterates through the queue and finds the maximum credit rating
  * queue q: a queue to check for emptiness; q must not be NULL
- * returns: value is > 0 iff queue has no elements
+ * returns: returns the max credit rating in the queue if it is not null. In null case, returns 0
  */
 int GetMaxRating(queue q);
 
 /*
- * adds item to end of queue
+ * iterates through the given queue and processes each credit rating then prints the results
  * queue q: 	a queue to append; q must not be NULL
  * void* item:	a pointer to an item to be enqueued onto queue
- * returns:		item appended to queue
  */
 void ProcessCreditRating(queue q);
 

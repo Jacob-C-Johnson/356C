@@ -16,7 +16,7 @@
 #define MAX_NAME_LENGTH 50
 
 // Function to calculate max credit rating
-int get_max_rating(queue q) {
+int GetMaxRating(queue q) {
     int max_rating = 0;
     q_element* current = q->front;
 
@@ -32,22 +32,22 @@ int get_max_rating(queue q) {
 }
 
 // Function to print a single credit rating
-void print_credit_rating(CreditRating* person, int max_rating) {
+void PrintCreditRating(CreditRating* person, int max_rating) {
     int distance = max_rating - person->creditRating;
     printf("%s: %d, Distance: %d\n", person->name, person->creditRating, distance);
 }
 
 // Function to process credit ratings (dequeue and calculate averages)
-void process_credit_ratings(queue q) {
+void ProcessCreditRating(queue q) {
     int total = 0;
     int count = 0;
-    int max_rating = get_max_rating(q);
+    int max_rating = GetMaxRating(q);
 
     printf("Name   Rating    Distance\n");
 
     while (!isempty(q)) {
         CreditRating* person = (CreditRating*)dequeue(q);
-        print_credit_rating(person, max_rating);
+        PrintCreditRating(person, max_rating);
         total += person->creditRating;
         count++;
         free(person);  // Free the memory of each person
@@ -60,13 +60,17 @@ void process_credit_ratings(queue q) {
 
 // Main function to drive the program
 int main() {
+    // Set up the queue and input variables
     queue q = newqueue();
     char input[MAX_NAME_LENGTH];
     int rating;
 
+    // Explain the input and prompt the user
     printf("Enter credit rating information (Name Rating). Press enter on a blank line to finish:\n");
 
+    // Loop to read input and enqueue it
     while (1) {
+        // Get input
         printf("Enter name and rating: ");
         fgets(input, sizeof(input), stdin);
 
@@ -88,7 +92,7 @@ int main() {
     }
 
     // Process the ratings and output results
-    process_credit_ratings(q);
+    ProcessCreditRating(q);
 
     return 0;
 }

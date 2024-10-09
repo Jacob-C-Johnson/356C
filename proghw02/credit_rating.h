@@ -22,14 +22,14 @@ typedef struct {
  * CreditRating* person: a pointer to a CreditRating struct to print
  * int max_rating: the maximum credit rating in the queue
  */
-void print_credit_rating(CreditRating* person, int max_rating);
+void PrintCreditRating(CreditRating* person, int max_rating);
 
 /*
  * checks the status of a queue
  * queue q: a queue to check for emptiness; q must not be NULL
  * returns: value is > 0 iff queue has no elements
  */
-int get_max_rating(queue q);
+int GetMaxRating(queue q);
 
 /*
  * adds item to end of queue
@@ -37,6 +37,6 @@ int get_max_rating(queue q);
  * void* item:	a pointer to an item to be enqueued onto queue
  * returns:		item appended to queue
  */
-void process_credit_ratings(queue q);
+void ProcessCreditRating(queue q);
 
 #endif /* CREDIT_RATING_H_ */

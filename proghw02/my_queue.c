@@ -14,30 +14,26 @@
 
 // Creates and returns a new queue
 queue newqueue() {
-    queue q = (queue)malloc(sizeof(struct queueS));
+    queue q = (queue)malloc(sizeof(struct queueS)); // Allocate memory for the queue
     if (q == NULL) {
         fprintf(stderr, "Failed to create a new queue\n");
         exit(1);
     }
-    q->front = NULL;
+    q->front = NULL; // Initialize the front of the queue
     return q;
-}
-
-// Checks if the queue is empty
-int isempty(const queue q) {
-    return q->front == NULL;
 }
 
 // Adds an item to the end of the queue
 void enqueue(queue q, void* item) {
-    q_element* new_elem = (q_element*)malloc(sizeof(q_element));
+    q_element* new_elem = (q_element*)malloc(sizeof(q_element)); // Allocate memory for the new queue element
     if (new_elem == NULL) {
         fprintf(stderr, "Failed to allocate memory for a new queue element\n");
         exit(1);
     }
-    new_elem->contents = item;
-    new_elem->next = NULL;
+    new_elem->contents = item; // Set the contents of the new element
+    new_elem->next = NULL; // Initialize the next pointer
 
+    // If the queue is empty, set the front to the new element. Else, add the new element to the end of the queue
     if (isempty(q)) {
         q->front = new_elem;
     } else {
@@ -55,12 +51,17 @@ void* dequeue(queue q) {
         return NULL;
     }
 
-    q_element* front_elem = q->front;
-    void* item = front_elem->contents;
-    q->front = front_elem->next;
+    q_element* front_elem = q->front; // Get the front element
+    void* item = front_elem->contents; // Get the contents of the front element
+    q->front = front_elem->next; // Set the front of the queue to the next element
 
-    free(front_elem);
+    free(front_elem); // Free the memory of the front element
     return item;
+}
+
+// Checks if the queue is empty
+int isempty(const queue q) {
+    return q->front == NULL;
 }
 
 // Returns the first item without removing it

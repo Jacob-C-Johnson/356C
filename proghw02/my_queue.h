@@ -41,7 +41,7 @@ queue newqueue();
  * queue q: a queue to check for emptiness; q must not be NULL
  * returns: value is > 0 iff queue has no elements
  */
-int isempty (const queue q);
+int isempty (queue q);
 
 /*
  * adds item to end of queue

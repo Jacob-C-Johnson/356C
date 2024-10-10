@@ -19,46 +19,47 @@
 
 // Function to calculate max credit rating
 int GetMaxRating(queue q) {
-    int max_rating = 0;
+    int maxRating = 0;
     q_element* current = q->front;
 
     // Iterate through the queue and find the maximum credit rating
     while (current != NULL) {
         CreditRating* person = (CreditRating*)current->contents; 
-        if (person->creditRating > max_rating) {
-            max_rating = person->creditRating;
+        if (person->creditRating > maxRating) {
+            maxRating = person->creditRating;
         }
         current = current->next;
     }
 
-    return max_rating;
+    return maxRating;
 }
 
 // Function to print a single credit rating
-void PrintCreditRating(CreditRating* person, int max_rating) {
-    int distance = max_rating - person->creditRating;
-    printf("%s: %d, Distance: %d\n", person->name, person->creditRating, distance);
+void PrintCreditRating(CreditRating* person, int maxRating) {
+    int distance = maxRating - person->creditRating;
+    printf("%s\t %d\t %d\n", person->name, person->creditRating, distance);
 }
 
 // Function to process credit ratings (dequeue and calculate averages)
 void ProcessCreditRating(queue q) {
     int total = 0;
     int count = 0;
-    int max_rating = GetMaxRating(q);
+    int maxRating = GetMaxRating(q);
 
     printf("Name   Rating    Distance\n");
 
     // While the queue is not empty, dequeue and process each person
     while (!isempty(q)) {
         CreditRating* person = (CreditRating*)dequeue(q);
-        PrintCreditRating(person, max_rating);
+        PrintCreditRating(person, maxRating);
         total += person->creditRating;
         count++;
         free(person);  // Free the memory of each person
     }
 
     if (count > 0) {
-        printf("Average Credit Rating: %d\n", total / count);
+        printf("\nAverage Credit Rating: %d\n", total / count);
+        printf("Highest Credit Rating: %d\n", maxRating);
     }
 }
 
@@ -70,7 +71,7 @@ int main() {
     int rating;
 
     // Explain the input and prompt the user
-    printf("Enter credit rating information seperated by a space (Name Rating). Press enter on a blank line to finish:\n");
+    printf("\nEnter credit rating information seperated by a space (Name Rating). Press enter on a blank line to finish.\n");
 
     // Loop to read input and enqueue it
     while (1) {
@@ -80,7 +81,7 @@ int main() {
 
         // Check for blank line to terminate input
         if (strcmp(input, "\n") == 0) {
-            printf("\nProcessing credit ratings...\n");
+            printf("\nProcessing credit ratings...\n\n");
             break;
         }
 

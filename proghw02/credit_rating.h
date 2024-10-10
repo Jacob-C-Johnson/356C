@@ -22,9 +22,9 @@ typedef struct {
 /*
  * Function to print a single credit rating
  * CreditRating* person: a pointer to a CreditRating struct to print
- * int max_rating: the maximum credit rating in the queue
+ * int maxRating: the maximum credit rating in the queue
  */
-void PrintCreditRating(CreditRating* person, int max_rating);
+void PrintCreditRating(CreditRating* person, int maxRating);
 
 /*
  * Iterates through the queue and finds the maximum credit rating

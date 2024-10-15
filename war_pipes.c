@@ -1,5 +1,5 @@
 /*
- * Warpipes.c - Program to simulate a card game tournament between two children
+ * war_pipes.c - Program to simulate a card game tournament between two children
  *
  * Author: Jacob Johnson
  * Date: 10/15/2024 

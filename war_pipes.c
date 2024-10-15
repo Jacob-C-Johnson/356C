@@ -54,9 +54,6 @@ int main(int argc, char *argv[]) {
     int pipe1[2], pipe2[2];  // Pipes for communication with children
     pid_t pid1, pid2;
 
-    // Seed the random number generator
-    srand(time(NULL));
-
     // Create pipes
     if (pipe(pipe1) == -1 || pipe(pipe2) == -1) {
         perror("pipe");
@@ -65,6 +62,8 @@ int main(int argc, char *argv[]) {
 
     // Fork child 1
     if ((pid1 = fork()) == 0) {
+        srand(time(NULL) ^ getpid());  // Unique seed for each child process
+
         close(pipe1[0]);  // Close unused read end
         for (int i = 0; i < rounds; i++) {
             int rank, suit;
@@ -78,6 +77,8 @@ int main(int argc, char *argv[]) {
 
     // Fork child 2
     if ((pid2 = fork()) == 0) {
+        srand(time(NULL) ^ getpid());  // Unique seed for each child process
+
         close(pipe2[0]);  // Close unused read end
         for (int i = 0; i < rounds; i++) {
             int rank, suit;

@@ -1,3 +1,13 @@
+/*
+ * Warpipes.c - Program to simulate a card game tournament between two children
+ *
+ * Author: Jacob Johnson
+ * Date: 10/15/2024 
+ *
+ * Assignment: HW-Prog03
+ * Course: CSCI 356
+ * Version 1.0
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>

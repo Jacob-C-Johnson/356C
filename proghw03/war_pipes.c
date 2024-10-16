@@ -19,6 +19,7 @@
 #define NUM_CARDS 13  // 2-10 + Jack(11), Queen(12), King(13), Ace(14)
 #define NUM_SUITS 4    // Spades(1), Hearts(2), Diamonds(3), Clubs(4)
 
+// Arrays for suits and ranks to print the card draw
 const char *suits[] = { "Spades", "Hearts", "Diamonds", "Clubs" };
 const char *ranks[] = { 
     "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", 
@@ -38,6 +39,7 @@ int determine_winner(int rank1, int suit1, int rank2, int suit2) {
     printf("Child 1 draws %s \n", ranks[rank1 - 1]);
     printf("Child 2 draws %s \n", ranks[rank2 - 1]);
 
+    // determine the winner
     if (rank1 > rank2) {
         printf("Child 1 Wins!\n");
         return 1;
@@ -63,22 +65,25 @@ int determine_winner(int rank1, int suit1, int rank2, int suit2) {
             return 2;
         }
     }
-    return 0;  // Tie
+    return 0;  // Return 0 for a absolute tie
 }
 
 int main(int argc, char *argv[]) { 
+    // Check for correct number of arguments
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <number_of_rounds>\n", argv[0]);
         exit(1);
     }
 
+    // Ensure rounds argument is a positive integer
     int rounds = atoi(argv[1]);
     if (rounds <= 0) {
         fprintf(stderr, "Number of rounds must be a positive integer.\n");
         exit(1);
     }
 
-    int pipe1[2], pipe2[2];  // Pipes for communication with children
+    // Initialize pipes and fork children
+    int pipe1[2], pipe2[2];  
     pid_t pid1, pid2;
 
     // Create pipes
@@ -92,6 +97,8 @@ int main(int argc, char *argv[]) {
         srand(time(NULL) ^ getpid());  // Unique seed for each child process
 
         close(pipe1[0]);  // Close unused read end
+
+        // Draw cards for each round and write to pipe
         for (int i = 0; i < rounds; i++) {
             int rank, suit;
             draw_card(&rank, &suit);
@@ -99,7 +106,7 @@ int main(int argc, char *argv[]) {
             write(pipe1[1], &suit, sizeof(suit));
         }
         close(pipe1[1]);  // Close write end
-        exit(0);
+        exit(0); // Exit for next child
     }
 
     // Fork child 2
@@ -114,19 +121,21 @@ int main(int argc, char *argv[]) {
             write(pipe2[1], &suit, sizeof(suit));
         }
         close(pipe2[1]);  // Close write end
-        exit(0);
+        exit(0); // Exit to main
     }
 
-    // Parent process
-    close(pipe1[1]);  // Close unused write ends
+    // Close unused write ends
+    close(pipe1[1]);  
     close(pipe2[1]);
 
+    // Initialize scores
     int score1 = 0, score2 = 0;
 
     printf("Child 1 PID: %d\n", pid1);
     printf("Child 2 PID: %d\n", pid2);
     printf("Beginning %d Rounds...\n", rounds);
 
+    // Play the game for the specified number of rounds
     for (int i = 0; i < rounds; i++) {
         printf("---------------------------\n");
         printf("Round %d:\n", i + 1);
@@ -144,6 +153,7 @@ int main(int argc, char *argv[]) {
         // Determine the winner
         int winner = determine_winner(rank1, suit1, rank2, suit2);
         
+        // Tally the scores
         if (winner == 1) {
             score1++;
         } else if (winner == 2) {
@@ -162,6 +172,7 @@ int main(int argc, char *argv[]) {
     wait(NULL);
     wait(NULL);
 
+    // Print tournament Results
     printf("---------------------------\n");
     printf("Results:\n");
     printf("Child 1: %d\n", score1);

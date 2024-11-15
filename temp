@@ -1,0 +1,97 @@
+/*
+ * war_networked.c - Program to simulate a card game tournament between two children using sockets and pthreads
+ *
+ * Author: Jacob Johnson
+ * Date: 11/14/2024 
+ *
+ * Assignment: HW-Prog04
+ * Course: CSCI 356
+ * Version 1.0
+ */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <pthread.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <sys/wait.h>
+
+// Socket file path
+#define SOCKET_PATH1 "/tmp/war_socket"
+#define SOCKET_PATH2 "/tmp/war_socket2"
+
+// Function prototypes
+int draw_card();
+void resolve_tie(int c1_card, int c2_card, int *winner);
+
+int main(int argc, char *argv[]) {
+    // Check for correct number of arguments
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s <number_of_rounds>\n", argv[0]);
+        exit(1);
+    }
+
+    // Ensure rounds argument is a positive integer
+    int rounds = atoi(argv[1]);
+    if (rounds <= 0) {
+        fprintf(stderr, "Number of rounds must be a positive integer.\n");
+        exit(1);
+    }
+
+    // Unlink the socket file if it already exists
+    unlink(SOCKET_PATH1);
+    unlink(SOCKET_PATH2);
+
+    // Create server sockets for two children
+    int server_fd1 = socket(AF_UNIX, SOCK_STREAM, 0);
+    int server_fd2 = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (server_fd1 < 0 || server_fd2 < 0) {
+        perror("Socket creation failed");
+        exit(EXIT_FAILURE);
+    }
+
+    struct sockaddr_un addr1 = {.sun_family = AF_UNIX}, addr2 = {.sun_family = AF_UNIX};
+    strcpy(addr1.sun_path, SOCKET_PATH1);
+    strcpy(addr2.sun_path, SOCKET_PATH2);
+    unlink(SOCKET_PATH1);
+    unlink(SOCKET_PATH2);
+
+    if (bind(server_fd1, (struct sockaddr *)&addr1, sizeof(addr1)) < 0 ||
+        bind(server_fd2, (struct sockaddr *)&addr2, sizeof(addr2)) < 0) {
+        perror("Bind failed");
+        exit(EXIT_FAILURE);
+    }
+
+    // Listen for child 1
+    if (listen(server_fd1, 1) < 0) {
+        perror("listen failed...");
+        close(server_fd1);
+        exit(EXIT_FAILURE);
+    }
+
+    // Listen for child 2
+    if (listen(server_fd2, 1) < 0) {
+        perror("listen failed...");
+        close(server_fd2);
+        exit(EXIT_FAILURE);
+    }
+
+    // Spawn child threads
+    pthread_t thread1, thread2;
+    pthread_create(&thread1, NULL, DRAW, NULL);
+    pthread_create(&thread2, NULL, DRAW, NULL);
+
+    // Clean up the server socket
+    close(server_fd1);
+    close(server_fd2);
+    unlink(SOCKET_PATH1);
+    unlink(SOCKET_PATH2);
+
+    return 0;
+}
+
+int draw_card() {
+    srand(time(NULL));
+    
+}

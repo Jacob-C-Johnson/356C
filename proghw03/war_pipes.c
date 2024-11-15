@@ -1,5 +1,5 @@
 /*
- * war_pipes.c - Program to simulate a card game tournament between two children
+ * war_pipes.c - Program to simulate a card game tournament between two children using interprocess communication
  *
  * Author: Jacob Johnson
  * Date: 10/15/2024 
@@ -102,8 +102,8 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < rounds; i++) {
             int rank, suit;
             draw_card(&rank, &suit);
-            write(pipe1[1], &rank, sizeof(rank));
-            write(pipe1[1], &suit, sizeof(suit));
+            write(pipe1[1], &rank, sizeof(rank)); // Write the drawn cards using the pipe 
+            write(pipe1[1], &suit, sizeof(suit)); // Write the drawn cards using the pipe
         }
         close(pipe1[1]);  // Close write end
         exit(0); // Exit for next child
@@ -117,8 +117,8 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < rounds; i++) {
             int rank, suit;
             draw_card(&rank, &suit);
-            write(pipe2[1], &rank, sizeof(rank));
-            write(pipe2[1], &suit, sizeof(suit));
+            write(pipe2[1], &rank, sizeof(rank)); // Write the drawn cards using the pipe
+            write(pipe2[1], &suit, sizeof(suit)); // Write the drawn cards using the pipe
         }
         close(pipe2[1]);  // Close write end
         exit(0); // Exit to main

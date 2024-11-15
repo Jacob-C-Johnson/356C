@@ -1,3 +1,13 @@
+/*
+ * war_networked.c - Program to simulate a card game tournament between two children using Pthreads and Sockets for child-parent communication.
+ *
+ * Author: Jacob Johnson
+ * Date: 11/15/2024 
+ *
+ * Assignment: HW-Prog04
+ * Course: CSCI 356
+ * Version 1.0
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,7 +24,7 @@ typedef struct {
 // Card structure
 typedef struct {
     int rank;   // 2-14 (2-10, Jack=11, Queen=12, King=13, Ace=14)
-    char suit[10];  // 'Spades', 'Hearts', 'Diamonds', 'Clubs'
+    char suit[10];  
 } Card;
 
 // Function to draw a random card
@@ -61,11 +71,11 @@ char *format_card(Card card) {
 
 // Thread function for child threads
 void *child_thread(void *arg) {
-    thread_data_t *data = (thread_data_t *)arg;
-    int socket_fd = data->thread_socket;
+    thread_data_t *data = (thread_data_t *)arg; // Get the socket from the thread data
+    int socket_fd = data->thread_socket; // Child side
     while (1) {
-        char buffer[256];
-        read(socket_fd, buffer, sizeof(buffer));
+        char buffer[256]; // Buffer for reading commands
+        read(socket_fd, buffer, sizeof(buffer)); // Read command from parent
         if (strcmp(buffer, "QUIT") == 0) {
             break; // Exit the thread
         } else if (strcmp(buffer, "DRAW") == 0) {
@@ -78,25 +88,29 @@ void *child_thread(void *arg) {
 
 // Main function
 int main(int argc, char *argv[]) {
+    // Check for correct number of arguments
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <number_of_rounds>", argv[0]);
         exit(EXIT_FAILURE);
     }
 
+    // Parse the number of rounds
     int rounds = atoi(argv[1]);
     if (rounds <= 0) {
         fprintf(stderr, "Number of rounds must be greater than 0.");
         exit(EXIT_FAILURE);
     }
 
+    // Seed the random number generator
     srand(time(NULL));
 
     // Create sockets for parent-child communication
     int sockets[2][2]; // One socket pair per child
     for (int i = 0; i < 2; i++) {
+        // Create a socket pair
         if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockets[i]) < 0) {
             perror("socketpair");
-            exit(EXIT_FAILURE);
+            exit(EXIT_FAILURE); // Exit if socket creation fails
         }
     }
 
@@ -105,6 +119,7 @@ int main(int argc, char *argv[]) {
     thread_data_t thread_data[2];
     for (int i = 0; i < 2; i++) {
         thread_data[i].thread_socket = sockets[i][1]; // Child side
+        // Create the child thread
         if (pthread_create(&threads[i], NULL, child_thread, &thread_data[i]) != 0) {
             perror("pthread_create");
             exit(EXIT_FAILURE);
@@ -115,7 +130,7 @@ int main(int argc, char *argv[]) {
     printf("\nChild 1 PID: %lu\n", threads[0]);
     printf("\nChild 2 PID: %lu\n", threads[1]);
 
-
+    // Begin the tournament
     printf("\nBeginning %d Rounds…\n", rounds);
     printf("\nFight!\n");
     printf("---------------------------\n");
@@ -188,7 +203,8 @@ int main(int argc, char *argv[]) {
             wins[1]++;
             printf("\nChild 2 Wins!\n");
         }
-    } else {
+    } 
+    else {
         printf("\n---------------------------\n");
         printf("\nResults:\n \nChild 1: %d \n \nChild 2: %d \n", wins[0], wins[1]);
         if (wins[0] > wins[1]) {

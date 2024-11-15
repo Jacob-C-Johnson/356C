@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-pthread
+CFLAGS=-pthread 
 TARGET=war_networked
 
 all: $(TARGET)

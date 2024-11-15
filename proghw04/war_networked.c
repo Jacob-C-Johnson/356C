@@ -5,127 +5,208 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <sys/wait.h>
 
-#define SOCKET_PATH "/tmp/war_socket"
-
+// Struct to pass in the socket information
 typedef struct {
     int thread_socket;
 } thread_data_t;
 
-void *client_thread(void *arg) {
-    thread_data_t *data = (thread_data_t *)arg;
+// Card structure
+typedef struct {
+    int rank;   // 2-14 (2-10, Jack=11, Queen=12, King=13, Ace=14)
+    char suit[10];  // 'Spades', 'Hearts', 'Diamonds', 'Clubs'
+} Card;
 
-    // Connect to the server as a client
-    sleep(1); // Give the parent a moment to set up the listener
+// Function to draw a random card
+Card draw_card() {
+    Card card;
+    card.rank = (rand() % 13) + 2; // Generate rank between 2 and 14
+    int suit_index = rand() % 4;   // Randomize suit index
 
-    int client_sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (client_sockfd < 0) {
-        perror("client socket failed...");
-        pthread_exit(NULL);
+    // Map suit_index to suit string
+    switch (suit_index) {
+        case 0: strcpy(card.suit, "Spades"); break;
+        case 1: strcpy(card.suit, "Hearts"); break;
+        case 2: strcpy(card.suit, "Diamonds"); break;
+        case 3: strcpy(card.suit, "Clubs"); break;
     }
 
-    struct sockaddr_un server_addr;
-    server_addr.sun_family = AF_UNIX;
-    strcpy(server_addr.sun_path, SOCKET_PATH);
-
-    if (connect(client_sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-        perror("connect failed...");
-        close(client_sockfd);
-        pthread_exit(NULL);
-    }
-
-    // Send a message to the server
-    const char *message = "Hello from Client!";
-    write(client_sockfd, message, strlen(message) + 1);
-
-    close(client_sockfd);
-    pthread_exit(NULL);
+    return card;
 }
 
+// Suit precedence for tie resolution
+int suit_precedence(char *suit) {
+    if (strcmp(suit, "Spades") == 0) return 4;
+    if (strcmp(suit, "Hearts") == 0) return 3;
+    if (strcmp(suit, "Diamonds") == 0) return 2;
+    if (strcmp(suit, "Clubs") == 0) return 1;
+    return 0;
+}
+
+// Format the cards
+char *format_card(Card card) {
+    char *formatted = malloc(20);
+    char *rank;
+    switch (card.rank) {
+        case 11: rank = "Jack"; break;
+        case 12: rank = "Queen"; break;
+        case 13: rank = "King"; break;
+        case 14: rank = "Ace"; break;
+        default: rank = malloc(3);
+                 sprintf(rank, "%d", card.rank);
+    }
+    sprintf(formatted, "%s", rank);
+    return formatted;
+}
+
+// Thread function for child threads
+void *child_thread(void *arg) {
+    thread_data_t *data = (thread_data_t *)arg;
+    int socket_fd = data->thread_socket;
+    while (1) {
+        char buffer[256];
+        read(socket_fd, buffer, sizeof(buffer));
+        if (strcmp(buffer, "QUIT") == 0) {
+            break; // Exit the thread
+        } else if (strcmp(buffer, "DRAW") == 0) {
+            Card card = draw_card();
+            write(socket_fd, &card, sizeof(Card)); // Send card to parent
+        }
+    }
+    return NULL;
+}
+
+// Main function
 int main(int argc, char *argv[]) {
     if (argc != 2) {
-        fprintf(stderr, "Usage: %s <number_of_rounds>\n", argv[0]);
-        exit(1);
+        fprintf(stderr, "Usage: %s <number_of_rounds>", argv[0]);
+        exit(EXIT_FAILURE);
     }
 
     int rounds = atoi(argv[1]);
     if (rounds <= 0) {
-        fprintf(stderr, "Number of rounds must be a positive integer.\n");
-        exit(1);
-    }
-
-    unlink(SOCKET_PATH);
-
-    int sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (sockfd < 0) {
-        perror("socket failed...");
+        fprintf(stderr, "Number of rounds must be greater than 0.");
         exit(EXIT_FAILURE);
     }
 
-    struct sockaddr_un server_addr;
-    server_addr.sun_family = AF_UNIX;
-    strcpy(server_addr.sun_path, SOCKET_PATH);
+    srand(time(NULL));
 
-    if (bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-        perror("bind failed...");
-        close(sockfd);
-        exit(EXIT_FAILURE);
+    // Create sockets for parent-child communication
+    int sockets[2][2]; // One socket pair per child
+    for (int i = 0; i < 2; i++) {
+        if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockets[i]) < 0) {
+            perror("socketpair");
+            exit(EXIT_FAILURE);
+        }
     }
 
-    if (listen(sockfd, 2) < 0) {
-        perror("listen failed...");
-        close(sockfd);
-        exit(EXIT_FAILURE);
+    // Create child threads
+    pthread_t threads[2];
+    thread_data_t thread_data[2];
+    for (int i = 0; i < 2; i++) {
+        thread_data[i].thread_socket = sockets[i][1]; // Child side
+        if (pthread_create(&threads[i], NULL, child_thread, &thread_data[i]) != 0) {
+            perror("pthread_create");
+            exit(EXIT_FAILURE);
+        }
     }
 
-    pthread_t thread1, thread2;
-    thread_data_t data1, data2;
+    // Print the thread IDs instead of process IDs for child threads
+    printf("\nChild 1 PID: %lu\n", threads[0]);
+    printf("\nChild 2 PID: %lu\n", threads[1]);
 
-    // Create client threads
-    pthread_create(&thread1, NULL, client_thread, (void *)&data1);
-    pthread_create(&thread2, NULL, client_thread, (void *)&data2);
 
-    // Accept connections from the clients
-    data1.thread_socket = accept(sockfd, NULL, NULL);
-    if (data1.thread_socket < 0) {
-        perror("accept failed...");
-        close(sockfd);
-        exit(EXIT_FAILURE);
+    printf("\nBeginning %d Rounds…\n", rounds);
+    printf("\nFight!\n");
+    printf("---------------------------\n");
+
+    int wins[2] = {0, 0}; // Track wins for each child
+
+    for (int round = 1; round <= rounds; round++) {
+        printf("\nRound %d:\n", round);
+
+        // Signal both children to draw cards
+        for (int i = 0; i < 2; i++) {
+            write(sockets[i][0], "DRAW", strlen("DRAW") + 1);
+        }
+
+        // Receive cards from both children
+        Card cards[2];
+        for (int i = 0; i < 2; i++) {
+            read(sockets[i][0], &cards[i], sizeof(Card));
+        }
+
+        // Print the draws (ranks only)
+        printf("\nChild 1 draws %s \n", format_card(cards[0]));
+        printf("\nChild 2 draws %s \n", format_card(cards[1]));
+
+        // Determine the winner
+        if (cards[0].rank > cards[1].rank) {
+            printf("\nChild 1 Wins!\n");
+            wins[0]++;
+        } else if (cards[1].rank > cards[0].rank) {
+            printf("\nChild 2 Wins!\n");
+            wins[1]++;
+        } else { // Handle tie (show suits)
+            printf("\nChecking suits…\n");
+            printf("\nChild 1 draws suit %s %s \n", format_card(cards[0]), cards[0].suit);
+            printf("\nChild 2 draws suit %s %s \n", format_card(cards[1]), cards[1].suit);
+            if (suit_precedence(cards[0].suit) > suit_precedence(cards[1].suit)) {
+                printf("\nChild 1 Wins!\n");
+                wins[0]++;
+            } else {
+                printf("\nChild 2 Wins!\n");
+                wins[1]++;
+            }
+        }
+        printf("\n---------------------------\n");
     }
 
-    data2.thread_socket = accept(sockfd, NULL, NULL);
-    if (data2.thread_socket < 0) {
-        perror("accept failed...");
-        close(sockfd);
-        exit(EXIT_FAILURE);
+    // Check for sudden death if tied
+    if (wins[0] == wins[1]) {
+        printf("\nSudden Death Round!\n");
+
+        // Signal both children to draw cards
+        for (int i = 0; i < 2; i++) {
+            write(sockets[i][0], "DRAW", strlen("DRAW") + 1);
+        }
+
+        // Receive cards from both children
+        Card cards[2];
+        for (int i = 0; i < 2; i++) {
+            read(sockets[i][0], &cards[i], sizeof(Card));
+        }
+
+        // Print the sudden death results (ranks only unless tied)
+        printf("\nChild 1 draws %s \n", format_card(cards[0]));
+        printf("\nChild 2 draws %s \n", format_card(cards[1]));
+        if (cards[0].rank > cards[1].rank || 
+            (cards[0].rank == cards[1].rank && suit_precedence(cards[0].suit) > suit_precedence(cards[1].suit))) {
+            wins[0]++;
+            printf("\nChild 1 Wins!\n");
+        } else {
+            wins[1]++;
+            printf("\nChild 2 Wins!\n");
+        }
+    } else {
+        printf("\n---------------------------\n");
+        printf("\nResults:\n \nChild 1: %d \n \nChild 2: %d \n", wins[0], wins[1]);
+        if (wins[0] > wins[1]) {
+            printf("\nChild 1 Wins!\n");
+        } else {
+            printf("\nChild 2 Wins!\n");
+        }
     }
 
-    // Read messages from the clients
-    char buffer[100];
-    ssize_t bytes_read = read(data1.thread_socket, buffer, sizeof(buffer));
-    if (bytes_read > 0) {
-        buffer[bytes_read] = '\0';
-        printf("Parent received from Client 1: %s\n", buffer);
+    // Signal children to quit
+    for (int i = 0; i < 2; i++) {
+        write(sockets[i][0], "QUIT", strlen("QUIT") + 1);
     }
 
-    bytes_read = read(data2.thread_socket, buffer, sizeof(buffer));
-    if (bytes_read > 0) {
-        buffer[bytes_read] = '\0';
-        printf("Parent received from Client 2: %s\n", buffer);
+    // Wait for threads to exit
+    for (int i = 0; i < 2; i++) {
+        pthread_join(threads[i], NULL);
     }
-
-    // Close the accepted connections
-    close(data1.thread_socket);
-    close(data2.thread_socket);
-
-    // Clean up the server socket
-    close(sockfd);
-    unlink(SOCKET_PATH);
-
-    // Wait for the client threads to finish
-    pthread_join(thread1, NULL);
-    pthread_join(thread2, NULL);
 
     return 0;
 }

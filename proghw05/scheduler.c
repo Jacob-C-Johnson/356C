@@ -14,16 +14,17 @@ typedef struct {
     int waiting_time;
     int response_time;
     int turnaround_time;
+    int last_update_time; // For aging calculations
 } Process;
 
 // Function prototypes
-void fcfs_scheduler(queue process_queue, Process* process_list[], int num_processes);
 void pp_scheduler(queue process_queue, Process* process_list[], int num_processes);
 void print_summary(Process* processes[], int num_processes, int total_time, int cpu_time);
+void age_processes(queue ready_queue, int current_time);
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        fprintf(stderr, "Usage: %s [FCFS | PP]\n", argv[0]);
+        fprintf(stderr, "Usage: %s [PP]\n", argv[0]);
         return 1;
     }
 
@@ -49,14 +50,13 @@ int main(int argc, char* argv[]) {
         process->waiting_time = 0;
         process->response_time = -1;
         process->turnaround_time = 0;
+        process->last_update_time = arrival_time;
 
         enqueue(process_queue, process);
         process_list[num_processes++] = process;
     }
 
-    if (strcmp(algorithm, "FCFS") == 0) {
-        fcfs_scheduler(process_queue, process_list, num_processes);
-    } else if (strcmp(algorithm, "PP") == 0) {
+    if (strcmp(algorithm, "PP") == 0) {
         pp_scheduler(process_queue, process_list, num_processes);
     } else {
         fprintf(stderr, "Invalid algorithm: %s\n", algorithm);
@@ -66,49 +66,13 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-void fcfs_scheduler(queue process_queue, Process* process_list[], int num_processes) {
-    int current_time = 0, cpu_time = 0;
-    Process* process;
-    queue ready_queue = newqueue();
-
-    while (!isempty(process_queue) || !isempty(ready_queue)) {
-        while (!isempty(process_queue)) {
-            process = (Process*)peek(process_queue);
-            if (process->arrival_time > current_time) break;
-            dequeue(process_queue);
-            enqueue(ready_queue, process);
-            printf("%d\t%d\tarriving\n", current_time, process->pid);
-        }
-
-        if (!isempty(ready_queue)) {
-            process = (Process*)dequeue(ready_queue);
-            if (process->response_time == -1) process->response_time = current_time - process->arrival_time;
-
-            printf("%d\t%d\trunning\n", current_time, process->pid);
-            cpu_time += process->remaining_time;
-            current_time += process->remaining_time;
-            process->remaining_time = 0;
-
-            process->completion_time = current_time;
-            process->turnaround_time = process->completion_time - process->arrival_time;
-            process->waiting_time = process->turnaround_time - process->cpu_time;
-
-            printf("%d\t%d\tfinished\n", current_time, process->pid);
-        } else {
-            printf("%d\tCPU idle\n", current_time);
-            current_time++;
-        }
-    }
-
-    print_summary(process_list, num_processes, current_time, cpu_time);
-}
-
 void pp_scheduler(queue process_queue, Process* process_list[], int num_processes) {
     int current_time = 0, cpu_time = 0;
     Process* running_process = NULL;
     queue ready_queue = newqueue();
 
     while (!isempty(process_queue) || running_process || !isempty(ready_queue)) {
+        // Check for process arrivals
         while (!isempty(process_queue)) {
             Process* process = (Process*)peek(process_queue);
             if (process->arrival_time > current_time) break;
@@ -117,6 +81,24 @@ void pp_scheduler(queue process_queue, Process* process_list[], int num_processe
             printf("%d\t%d\tarriving\n", current_time, process->pid);
         }
 
+        // Aging: Update priorities of processes in the ready queue
+        if (current_time % 8 == 0 && !isempty(ready_queue)) {
+            queue temp_queue = newqueue();
+            while (!isempty(ready_queue)) {
+                Process* process = (Process*)dequeue(ready_queue);
+                if (current_time - process->last_update_time >= 8) {
+                    process->priority++;
+                    process->last_update_time = current_time;
+                    printf("%d\t%d\taging\n", current_time, process->pid);
+                }
+                enqueue(temp_queue, process);
+            }
+            while (!isempty(temp_queue)) {
+                enqueue(ready_queue, dequeue(temp_queue));
+            }
+        }
+
+        // Check if running process has finished
         if (running_process && running_process->remaining_time == 0) {
             printf("%d\t%d\tfinished\n", current_time, running_process->pid);
             running_process->completion_time = current_time;
@@ -125,14 +107,26 @@ void pp_scheduler(queue process_queue, Process* process_list[], int num_processe
             running_process = NULL;
         }
 
-        if (!running_process && !isempty(ready_queue)) {
+        // Preemptive priority: Select the highest-priority process
+        if (!running_process || (!isempty(ready_queue) && ((Process*)peek(ready_queue))->priority > running_process->priority)) {
+            if (running_process) {
+                enqueue(ready_queue, running_process);
+            }
             running_process = (Process*)dequeue(ready_queue);
-            if (running_process->response_time == -1) running_process->response_time = current_time - running_process->arrival_time;
+            if (running_process->response_time == -1) {
+                running_process->response_time = current_time - running_process->arrival_time;
+            }
             printf("%d\t%d\trunning\n", current_time, running_process->pid);
         }
 
+        // Advance the clock and process running tasks
         current_time++;
-        if (running_process) running_process->remaining_time--;
+        if (running_process) {
+            running_process->remaining_time--;
+            cpu_time++;
+        } else {
+            printf("%d\tCPU idle\n", current_time);
+        }
     }
 
     print_summary(process_list, num_processes, current_time, cpu_time);

@@ -1,6 +1,7 @@
 {
     "files.associations": {
         ".fantomasignore": "ignore",
-        "time.h": "c"
+        "time.h": "c",
+        "temp": "cpp"
     }
 }

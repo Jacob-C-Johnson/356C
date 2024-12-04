@@ -1,97 +1,163 @@
-/*
- * war_networked.c - Program to simulate a card game tournament between two children using sockets and pthreads
- *
- * Author: Jacob Johnson
- * Date: 11/14/2024 
- *
- * Assignment: HW-Prog04
- * Course: CSCI 356
- * Version 1.0
- */
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <pthread.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <sys/wait.h>
+Simulation starting:
+0 1 arriving
+0 2 arriving
+0 1 running
+1 1 running
+2 1 running
+3 3 arriving
+3 3 running
+4 3 running
+5 3 running
+6 3 running
+7 4 arriving
+7 2 aging
+7 4 running
+8 4 running
+9 4 running
+10 1 aging
+10 4 running
+11 4 finished
+11 3 running
+12 3 running
+13 3 finished
+13 2 running
+14 2 running
+16 2 running
+17 2 running
+18 1 aging
+18 1 running
+19 1 running
+20 1 running
+21 1 running
+22 1 running
+23 1 running
+24 1 running
+25 1 running
+26 2 aging
+26 2 running
+26 2 running
+27 2 running
+28 2 running
+29 2 running
+30 2 running
+31 2 finished
+31 1 running
+32 1 finished
+Average waiting time: 11.75
+Average response time: 3.25
+Average turnaround time: 19.25
 
-// Socket file path
-#define SOCKET_PATH1 "/tmp/war_socket"
-#define SOCKET_PATH2 "/tmp/war_socket2"
 
-// Function prototypes
-int draw_card();
-void resolve_tie(int c1_card, int c2_card, int *winner);
+Program Specification
+In this project, you will be implementing a simple CPU scheduler, which simulates different scheduling algorithms given a process trace. Your scheduler will not need to deal with I/O, system-calls, or memory-related interrupts. Your scheduler will only deal with the actual process execution schedule, not with context-switching, process creation, or actual execution. The processes to be scheduled will be defined in terms of submission time, id and CPU time of each process.
 
-int main(int argc, char *argv[]) {
-    // Check for correct number of arguments
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s <number_of_rounds>\n", argv[0]);
-        exit(1);
-    }
+            Scoring: 100 points (90% correctness + 10% style)
 
-    // Ensure rounds argument is a positive integer
-    int rounds = atoi(argv[1]);
-    if (rounds <= 0) {
-        fprintf(stderr, "Number of rounds must be a positive integer.\n");
-        exit(1);
-    }
+     
 
-    // Unlink the socket file if it already exists
-    unlink(SOCKET_PATH1);
-    unlink(SOCKET_PATH2);
+Note 1: your solution must be written in the C programming language and will compile via a makefile and run on the CI Project (Linux), so ensure that your program compiles via the make command and executes in that environment.
 
-    // Create server sockets for two children
-    int server_fd1 = socket(AF_UNIX, SOCK_STREAM, 0);
-    int server_fd2 = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (server_fd1 < 0 || server_fd2 < 0) {
-        perror("Socket creation failed");
-        exit(EXIT_FAILURE);
-    }
+Note 2: you must use your implementation of my_queue in your solution
 
-    struct sockaddr_un addr1 = {.sun_family = AF_UNIX}, addr2 = {.sun_family = AF_UNIX};
-    strcpy(addr1.sun_path, SOCKET_PATH1);
-    strcpy(addr2.sun_path, SOCKET_PATH2);
-    unlink(SOCKET_PATH1);
-    unlink(SOCKET_PATH2);
+Note 3: may count this as 2 programming assignment grades
 
-    if (bind(server_fd1, (struct sockaddr *)&addr1, sizeof(addr1)) < 0 ||
-        bind(server_fd2, (struct sockaddr *)&addr2, sizeof(addr2)) < 0) {
-        perror("Bind failed");
-        exit(EXIT_FAILURE);
-    }
+ 
 
-    // Listen for child 1
-    if (listen(server_fd1, 1) < 0) {
-        perror("listen failed...");
-        close(server_fd1);
-        exit(EXIT_FAILURE);
-    }
+Algorithms to implement: your scheduler should implement the following algorithms:
+a. First Come First Serve (FCFS)
 
-    // Listen for child 2
-    if (listen(server_fd2, 1) < 0) {
-        perror("listen failed...");
-        close(server_fd2);
-        exit(EXIT_FAILURE);
-    }
+b. Preemptive Priority (PP) with aging. To prevent starvation, the addition of aging should be implemented. To accomplish this, basically you would increase the priority of each Process that is awaiting execution by 1, every 8 ms.
 
-    // Spawn child threads
-    pthread_t thread1, thread2;
-    pthread_create(&thread1, NULL, DRAW, NULL);
-    pthread_create(&thread2, NULL, DRAW, NULL);
+ 
 
-    // Clean up the server socket
-    close(server_fd1);
-    close(server_fd2);
-    unlink(SOCKET_PATH1);
-    unlink(SOCKET_PATH2);
+ 
 
-    return 0;
-}
+Scheduler input: the input for your scheduler should be read from standard input and will be in the following format:
+pid       arrival_time    cpu_time    [only for PP] priority
 
-int draw_card() {
-    srand(time(NULL));
-    
-}
+Where pid is the process id, arrival_time is the time at which the process arrives (in milliseconds), cpu_time is the time requested by the process, and priority is the priority of the process (a higher number represents a higher priority). Each of the fields will be a positive integer. Process ids will be unique and arrival times will be in ascending order. The end of the input will be indicated by a line containing zeros in each of the fields. 
+
+If you are unable to use your implementation of my_queue, you can use a static data structure to manage them with a PENALTY. You can assume that there will be a maximum of 25 jobs to be scheduled
+
+Interface: your scheduler should be invoked via the command-line. The first argument to your scheduler will be the scheduling algorithm to use and the second argument will be the time quantum (which will only be used by the round robin strategy).
+Usage: scheduler [FCFS | PP]
+
+Note: that the priority will only be valid when the selection is PP.
+
+Scheduler Output: the output of your scheduler should be each scheduling event and the time at which it occurred (one per line) of the format:
+time     pid       event
+
+There are four events that need to be output: process running, process completing, process arriving, and the CPU being idle.
+
+After all process have run to completion, your scheduler should output the following summary metrics: average waiting time, average response time, average turnaround time, and the average CPU usage.
+
+Please look at the sample input and output listed in item number 6 to get a better idea of what your requirements are.
+
+Design Hints: it would be a good idea to parse all the input and create a data structure to store the input. Then it should start the simulation driven by time. In other words, you will simulate a “clock” by ticking and in each “tick” of the clock, you will print output and update state. Your scheduler should be invoked when processes arrive, complete or when their quantum expires.
+ 
+
+It would also be a really good idea to create a PCB-like data structure that the scheduler uses to represent process and for the scheduler to manage PCBs in either a queue sorted according to the scheduling algorithm or in some other linear data structure.
+
+Sample Input and Output:
+$ scheduler 
+
+1 0 12 5
+2 0 9 5
+3 3 6 6
+4 7 4 7
+0 0 0
+
+Simulation starting:
+0 1 arriving
+0 2 arriving
+0 1 running
+1 1 running
+2 1 running
+3 3 arriving
+3 3 running
+4 3 running
+5 3 running
+6 3 running
+7 4 arriving
+7 2 aging
+7 4 running
+8 4 running
+9 4 running
+10 1 aging
+10 4 running
+11 4 finished
+11 3 running
+12 3 running
+13 3 finished
+13 2 running
+14 2 running
+16 2 running
+17 2 running
+18 1 aging
+18 1 running
+19 1 running
+20 1 running
+21 1 running
+22 1 running
+23 1 running
+24 1 running
+25 1 running
+26 2 aging
+26 2 running
+26 2 running
+27 2 running
+28 2 running
+29 2 running
+30 2 running
+31 2 finished
+31 1 running
+32 1 finished
+Average waiting time: 11.75
+Average response time: 3.25
+Average turnaround time: 19.25
+Average CPU usage: 100.00%
+
+ 
+Files you are required to upload to the dropbox:
+usernameScheduler.zip [where username is your coastal username]
+Final Note: you may create whatever files you would like for submission, but you are expected to include a readme text file that provide a manifest and description of the files included. It is standard procedure for readme files to include any special requirements for execution and/or a list and description of any problems or deficiencies with the program (this may help your grade if you can list and discuss any problems with your implementation).

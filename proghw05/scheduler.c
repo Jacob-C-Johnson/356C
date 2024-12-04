@@ -3,212 +3,279 @@
 #include <string.h>
 #include "my_queue.h"
 
-typedef struct {
+typedef struct Process {
     int pid;
     int arrival_time;
     int cpu_time;
     int priority;
+    int remaining_time;
     int start_time;
     int completion_time;
-    int remaining_time;
-    int response_time;
     int waiting_time;
-    int turnaround_time;
+    int response_time;
+    int last_run_time;  
+    int last_enqueued_time;
+    int last_aged_time;  // New field to track last aging time
 } Process;
 
-// Function prototypes
-void fcfs_scheduler(queue process_queue, Process* process_list[], int num_processes);
-void pp_scheduler(queue process_queue, Process* process_list[], int num_processes);
-void print_summary(Process* process_list[], int num_processes, int total_time, int cpu_time);
+typedef struct ProcessStats {
+    double avg_waiting_time;
+    double avg_response_time;
+    double avg_turnaround_time;
+    double cpu_usage;
+} ProcessStats;
 
-int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        fprintf(stderr, "Usage: %s [FCFS | PP]\n", argv[0]);
+#define AGING_INTERVAL 8
+#define MAX_PROCESSES 25
+
+void run_fcfs(Process processes[], int count);
+void run_pp(Process processes[], int count);
+void print_stats(Process processes[], int count, int total_time);
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        fprintf(stderr, "Usage: scheduler [FCFS | PP]\n");
         return 1;
     }
 
-    char* algorithm = argv[1];
-    queue process_queue = newqueue();
-    Process* process_list[25];
-    int num_processes = 0;
+    Process processes[MAX_PROCESSES];
+    int count = 0;
+    int pid, arrival_time, cpu_time, priority;
 
-    // Read input
     while (1) {
-        int pid, arrival_time, cpu_time, priority;
-        scanf("%d %d %d %d", &pid, &arrival_time, &cpu_time, &priority);
+        if (scanf("%d %d %d %d", &pid, &arrival_time, &cpu_time, &priority) != 4) break;
         if (pid == 0 && arrival_time == 0 && cpu_time == 0 && priority == 0) break;
 
-        Process* process = (Process*)malloc(sizeof(Process));
-        process->pid = pid;
-        process->arrival_time = arrival_time;
-        process->cpu_time = cpu_time;
-        process->priority = priority;
-        process->start_time = -1;
-        process->completion_time = -1;
-        process->remaining_time = cpu_time;
-        process->response_time = -1;
-        process->waiting_time = 0;
-        process->turnaround_time = 0;
+        processes[count].pid = pid;
+        processes[count].arrival_time = arrival_time;
+        processes[count].cpu_time = cpu_time;
+        processes[count].remaining_time = cpu_time;
+        processes[count].priority = priority;  // Store priority even if not used by FCFS
+        processes[count].start_time = -1;
+        processes[count].completion_time = -1;
+        processes[count].waiting_time = 0;
+        processes[count].response_time = -1;
+        processes[count].last_run_time = -1;
+        processes[count].last_enqueued_time = -1;
+        processes[count].last_aged_time = -1;
 
-        enqueue(process_queue, process);
-        process_list[num_processes++] = process;
+        count++;
     }
 
-    // Choose scheduling algorithm
-    if (strcmp(algorithm, "FCFS") == 0) {
-        fcfs_scheduler(process_queue, process_list, num_processes);
-    } else if (strcmp(algorithm, "PP") == 0) {
-        pp_scheduler(process_queue, process_list, num_processes);
+    printf("Simulation starting:\n");
+    if (strcmp(argv[1], "FCFS") == 0) {
+        run_fcfs(processes, count);
+    } else if (strcmp(argv[1], "PP") == 0) {
+        run_pp(processes, count);
     } else {
-        fprintf(stderr, "Invalid algorithm: %s\n", algorithm);
+        fprintf(stderr, "Invalid scheduling algorithm\n");
         return 1;
     }
 
     return 0;
 }
 
-// First Come First Serve Scheduler
-void fcfs_scheduler(queue process_queue, Process* process_list[], int num_processes) {
-    int current_time = 0, cpu_time = 0;
-    Process* process;
-
-    printf("Simulation starting:\n");
-    while (!isempty(process_queue)) {
-        process = (Process*)dequeue(process_queue);
-
-        // Process arrival
-        if (current_time < process->arrival_time) {
-            printf("%d\tCPU idle\n", current_time);
-            current_time = process->arrival_time;
-        }
-        printf("%d\t%d\tarriving\n", current_time, process->pid);
-
-        // Start processing
-        process->start_time = current_time;
-        printf("%d\t%d\trunning\n", current_time, process->pid);
-
-        current_time += process->cpu_time;
-        process->completion_time = current_time;
-
-        // Process completion
-        printf("%d\t%d\tfinished\n", current_time, process->pid);
-
-        process->turnaround_time = process->completion_time - process->arrival_time;
-        process->waiting_time = process->turnaround_time - process->cpu_time;
-        process->response_time = process->start_time - process->arrival_time;
-
-        cpu_time += process->cpu_time;
-    }
-
-    print_summary(process_list, num_processes, current_time, cpu_time);
-}
-
-// Preemptive Priority Scheduler with Aging
-void pp_scheduler(queue process_queue, Process* process_list[], int num_processes) {
-    int current_time = 0, cpu_time = 0;
-    Process* running_process = NULL;
+void run_pp(Process processes[], int count) {
     queue ready_queue = newqueue();
-
-    printf("Simulation starting:\n");
-
-    while (!isempty(process_queue) || running_process || !isempty(ready_queue)) {
-        // Handle arrivals
-        while (!isempty(process_queue)) {
-            Process* process = (Process*)peek(process_queue);
-            if (process->arrival_time > current_time) break;
-            dequeue(process_queue);
-            enqueue(ready_queue, process);
-            printf("%d\t%d\tarriving\n", current_time, process->pid);
-        }
-
-        // Apply aging to processes in the ready queue
-        if (current_time % 8 == 0) {
-            queue temp_queue = newqueue();
-            while (!isempty(ready_queue)) {
-                Process* process = (Process*)dequeue(ready_queue);
-                process->priority++; // Increment priority for aging
-                enqueue(temp_queue, process);
-                printf("%d\t%d\taging\n", current_time, process->pid);
-            }
-            while (!isempty(temp_queue)) {
-                enqueue(ready_queue, dequeue(temp_queue));
+    int current_time = 0;
+    int completed = 0;
+    int current_process_index = -1;
+    
+    // Initialize process timing
+    for (int i = 0; i < count; i++) {
+        processes[i].last_run_time = -1;
+        processes[i].last_enqueued_time = -1;
+        processes[i].last_aged_time = -1;
+    }
+    
+    while (completed < count) {
+        // Add new processes
+        for (int i = 0; i < count; i++) {
+            if (processes[i].arrival_time == current_time) {
+                printf("%d %d arriving\n", current_time, processes[i].pid);
+                int* index = malloc(sizeof(int));
+                *index = i;
+                processes[i].last_enqueued_time = current_time;
+                processes[i].last_run_time = -1;
+                enqueue(ready_queue, index);
             }
         }
 
-        // Check if the running process has finished
-        if (running_process && running_process->remaining_time == 0) {
-            printf("%d\t%d\tfinished\n", current_time, running_process->pid);
-            running_process->completion_time = current_time;
-            running_process->turnaround_time = running_process->completion_time - running_process->arrival_time;
-            running_process->waiting_time = running_process->turnaround_time - running_process->cpu_time;
-            running_process = NULL;
-        }
-
-        // Preemptive priority logic
-        if (!running_process || (!isempty(ready_queue) && ((Process*)peek(ready_queue))->priority > running_process->priority)) {
-            if (running_process) {
-                enqueue(ready_queue, running_process); // Re-enqueue the current running process
-            }
-            if (!isempty(ready_queue)) {
-                // Select the highest-priority process
-                queue temp_queue = newqueue();
-                Process* highest_priority_process = NULL;
-
-                while (!isempty(ready_queue)) {
-                    Process* process = (Process*)dequeue(ready_queue);
-                    if (!highest_priority_process || process->priority > highest_priority_process->priority) {
-                        if (highest_priority_process) {
-                            enqueue(temp_queue, highest_priority_process);
-                        }
-                        highest_priority_process = process;
-                    } else {
-                        enqueue(temp_queue, process);
-                    }
+        // Modified aging section for run_pp():
+        for (int i = 0; i < count; i++) {
+            if (processes[i].remaining_time > 0 && 
+                processes[i].arrival_time <= current_time &&
+                i != current_process_index) {
+                
+                int waiting_start;
+                if (processes[i].last_run_time == -1) {
+                    // Never run - count from arrival
+                    waiting_start = processes[i].arrival_time;
+                } else if (processes[i].last_aged_time != -1) {
+                    // Count from last aging
+                    waiting_start = processes[i].last_aged_time;
+                } else {
+                    // Count from last run
+                    waiting_start = processes[i].last_run_time;
                 }
-
-                while (!isempty(temp_queue)) {
-                    enqueue(ready_queue, dequeue(temp_queue));
+                
+                int waiting_time = current_time - waiting_start;
+                
+                if (waiting_time >= AGING_INTERVAL && 
+                    (processes[i].last_aged_time == -1 || 
+                     current_time - processes[i].last_aged_time >= AGING_INTERVAL)) {
+                    processes[i].priority++;
+                    processes[i].last_aged_time = current_time;
+                    printf("%d %d aging\n", current_time, processes[i].pid);
                 }
-
-                running_process = highest_priority_process;
-                if (running_process->response_time == -1) {
-                    running_process->response_time = current_time - running_process->arrival_time;
-                }
-                printf("%d\t%d\trunning\n", current_time, running_process->pid);
             }
         }
 
-        // Process execution
-        if (running_process) {
-            running_process->remaining_time--;
-            cpu_time++;
-        } else {
-            printf("%d\tCPU idle\n", current_time);
+        // Rest of the scheduling logic remains the same...
+        if (current_process_index != -1 && processes[current_process_index].remaining_time == 0) {
+            printf("%d %d finished\n", current_time, processes[current_process_index].pid);
+            processes[current_process_index].completion_time = current_time;
+            completed++;
+            current_process_index = -1;
+            continue;
+        }
+
+        // Select highest priority process
+        int highest_priority = current_process_index != -1 ? 
+            processes[current_process_index].priority : -1;
+        int selected_index = current_process_index;
+        
+        queue temp_queue = newqueue();
+        while (!isempty(ready_queue)) {
+            int* index = dequeue(ready_queue);
+            if (processes[*index].remaining_time > 0 && 
+                processes[*index].priority > highest_priority) {
+                if (selected_index != -1 && selected_index != current_process_index) {
+                    int* prev = malloc(sizeof(int));
+                    *prev = selected_index;
+                    enqueue(temp_queue, prev);
+                }
+                highest_priority = processes[*index].priority;
+                selected_index = *index;
+            } else {
+                enqueue(temp_queue, index);
+            }
+        }
+        
+        while (!isempty(temp_queue)) {
+            enqueue(ready_queue, dequeue(temp_queue));
+        }
+
+        // Handle preemption
+        if (selected_index != current_process_index) {
+            if (current_process_index != -1) {
+                int* index = malloc(sizeof(int));
+                *index = current_process_index;
+                processes[current_process_index].last_enqueued_time = current_time;
+                enqueue(ready_queue, index);
+            }
+            current_process_index = selected_index;
+        }
+
+        // Run selected process
+        if (current_process_index != -1) {
+            if (processes[current_process_index].remaining_time == processes[current_process_index].cpu_time) {
+                processes[current_process_index].start_time = current_time;
+                processes[current_process_index].response_time = current_time - 
+                    processes[current_process_index].arrival_time;
+            }
+            printf("%d %d running\n", current_time, processes[current_process_index].pid);
+            processes[current_process_index].remaining_time--;
+            processes[current_process_index].last_aged_time = -1;  // Reset aging when process runs
+            processes[current_process_index].last_run_time = current_time;
         }
 
         current_time++;
     }
 
-    print_summary(process_list, num_processes, current_time, cpu_time);
+    print_stats(processes, count, current_time);
+}
+
+void run_fcfs(Process processes[], int count) {
+    queue ready_queue = newqueue();
+    int current_time = 0;
+    int completed = 0;
+    int current_process_index = -1;
+
+    while (completed < count) {
+        // Check for newly arrived processes
+        for (int i = 0; i < count; i++) {
+            if (processes[i].arrival_time == current_time) {
+                printf("%d %d arriving\n", current_time, processes[i].pid);
+                int* index = malloc(sizeof(int));
+                if (!index) {
+                    fprintf(stderr, "Memory allocation failed\n");
+                    exit(EXIT_FAILURE);
+                }
+                *index = i;
+                enqueue(ready_queue, index);
+            }
+        }
+
+        // Select the next process to run if no process is currently running
+        if (current_process_index == -1 && !isempty(ready_queue)) {
+            int* index = dequeue(ready_queue);
+            if (index != NULL) {
+                current_process_index = *index;
+                free(index);
+
+                // Start process execution
+                processes[current_process_index].start_time = current_time;
+                processes[current_process_index].response_time = current_time - processes[current_process_index].arrival_time;
+                printf("%d %d running\n", current_time, processes[current_process_index].pid);
+            }
+        }
+
+        // Execute the running process
+        if (current_process_index != -1) {
+            processes[current_process_index].remaining_time--;
+
+            // If the process completes
+            if (processes[current_process_index].remaining_time == 0) {
+                printf("%d %d finished\n", current_time + 1, processes[current_process_index].pid);
+                processes[current_process_index].completion_time = current_time + 1;
+                completed++;
+
+                // Calculate metrics
+                processes[current_process_index].waiting_time =
+                    processes[current_process_index].completion_time -
+                    processes[current_process_index].arrival_time -
+                    processes[current_process_index].cpu_time;
+
+                current_process_index = -1; // Reset to select the next process
+            }
+        }
+
+        current_time++;
+    }
+
+    print_stats(processes, count, current_time);
 }
 
 
-// Summary Metrics
-void print_summary(Process* process_list[], int num_processes, int total_time, int cpu_time) {
-    double avg_waiting_time = 0, avg_response_time = 0, avg_turnaround_time = 0;
 
-    for (int i = 0; i < num_processes; i++) {
-        avg_waiting_time += process_list[i]->waiting_time;
-        avg_response_time += process_list[i]->response_time;
-        avg_turnaround_time += process_list[i]->turnaround_time;
+void print_stats(Process processes[], int count, int total_time) {
+    double total_waiting_time = 0;
+    double total_response_time = 0;
+    double total_turnaround_time = 0;
+    int total_cpu_time = 0;
+    
+    for (int i = 0; i < count; i++) {
+        int turnaround_time = processes[i].completion_time - processes[i].arrival_time;
+        total_waiting_time += turnaround_time - processes[i].cpu_time;
+        total_response_time += processes[i].response_time;
+        total_turnaround_time += turnaround_time;
+        total_cpu_time += processes[i].cpu_time;
     }
 
-    avg_waiting_time /= num_processes;
-    avg_response_time /= num_processes;
-    avg_turnaround_time /= num_processes;
-
-    printf("Average waiting time: %.2f\n", avg_waiting_time);
-    printf("Average response time: %.2f\n", avg_response_time);
-    printf("Average turnaround time: %.2f\n", avg_turnaround_time);
-    printf("Average CPU usage: %.2f%%\n", (double)cpu_time / total_time * 100);
+    printf("Average waiting time: %.2f\n", total_waiting_time / count);
+    printf("Average response time: %.2f\n", total_response_time / count);
+    printf("Average turnaround time: %.2f\n", total_turnaround_time / count);
+    printf("Average CPU usage: %.2f%%\n", 
+           ((double)total_cpu_time / total_time) * 100);
 }

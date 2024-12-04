@@ -1,8 +1,19 @@
+/*
+ * scheduler.c - Program to simulate a process scheduler using First-Come First-Served (FCFS) and Preemptive Priority (PP) algorithms.
+ *
+ * Author: Jacob Johnson
+ * Date: 12/04/2024 
+ *
+ * Assignment: HW-Prog05
+ * Course: CSCI 356
+ * Version 1.0
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "my_queue.h"
 
+// Process structure
 typedef struct Process {
     int pid;
     int arrival_time;
@@ -15,9 +26,10 @@ typedef struct Process {
     int response_time;
     int last_run_time;  
     int last_enqueued_time;
-    int last_aged_time;  // New field to track last aging time
+    int last_aged_time;
 } Process;
 
+// Process statistics
 typedef struct ProcessStats {
     double avg_waiting_time;
     double avg_response_time;
@@ -28,6 +40,7 @@ typedef struct ProcessStats {
 #define AGING_INTERVAL 8
 #define MAX_PROCESSES 25
 
+// Function prototypes
 void run_fcfs(Process processes[], int count);
 void run_pp(Process processes[], int count);
 void print_stats(Process processes[], int count, int total_time);
@@ -42,6 +55,7 @@ int main(int argc, char *argv[]) {
     int count = 0;
     int pid, arrival_time, cpu_time, priority;
 
+    // Read the input
     while (1) {
         if (scanf("%d %d %d %d", &pid, &arrival_time, &cpu_time, &priority) != 4) break;
         if (pid == 0 && arrival_time == 0 && cpu_time == 0 && priority == 0) break;
@@ -50,7 +64,7 @@ int main(int argc, char *argv[]) {
         processes[count].arrival_time = arrival_time;
         processes[count].cpu_time = cpu_time;
         processes[count].remaining_time = cpu_time;
-        processes[count].priority = priority;  // Store priority even if not used by FCFS
+        processes[count].priority = priority;  
         processes[count].start_time = -1;
         processes[count].completion_time = -1;
         processes[count].waiting_time = 0;
@@ -62,6 +76,7 @@ int main(int argc, char *argv[]) {
         count++;
     }
 
+    // Run the simulation
     printf("Simulation starting:\n");
     if (strcmp(argv[1], "FCFS") == 0) {
         run_fcfs(processes, count);
@@ -107,6 +122,7 @@ void run_pp(Process processes[], int count) {
                 processes[i].arrival_time <= current_time &&
                 i != current_process_index) {
                 
+                // Calculate waiting time
                 int waiting_start;
                 if (processes[i].last_run_time == -1) {
                     // Never run - count from arrival
@@ -121,6 +137,7 @@ void run_pp(Process processes[], int count) {
                 
                 int waiting_time = current_time - waiting_start;
                 
+                // Age the process if it has been waiting for AGING_INTERVAL
                 if (waiting_time >= AGING_INTERVAL && 
                     (processes[i].last_aged_time == -1 || 
                      current_time - processes[i].last_aged_time >= AGING_INTERVAL)) {
@@ -131,7 +148,7 @@ void run_pp(Process processes[], int count) {
             }
         }
 
-        // Rest of the scheduling logic remains the same...
+        // Check if current process finished
         if (current_process_index != -1 && processes[current_process_index].remaining_time == 0) {
             printf("%d %d finished\n", current_time, processes[current_process_index].pid);
             processes[current_process_index].completion_time = current_time;
@@ -145,6 +162,7 @@ void run_pp(Process processes[], int count) {
             processes[current_process_index].priority : -1;
         int selected_index = current_process_index;
         
+        // Select the highest priority process
         queue temp_queue = newqueue();
         while (!isempty(ready_queue)) {
             int* index = dequeue(ready_queue);
@@ -162,6 +180,7 @@ void run_pp(Process processes[], int count) {
             }
         }
         
+        // Re-enqueue the remaining processes
         while (!isempty(temp_queue)) {
             enqueue(ready_queue, dequeue(temp_queue));
         }
@@ -186,7 +205,7 @@ void run_pp(Process processes[], int count) {
             }
             printf("%d %d running\n", current_time, processes[current_process_index].pid);
             processes[current_process_index].remaining_time--;
-            processes[current_process_index].last_aged_time = -1;  // Reset aging when process runs
+            processes[current_process_index].last_aged_time = -1;
             processes[current_process_index].last_run_time = current_time;
         }
 
@@ -202,6 +221,7 @@ void run_fcfs(Process processes[], int count) {
     int completed = 0;
     int current_process_index = -1;
 
+    // Run the simulation
     while (completed < count) {
         // Check for newly arrived processes
         for (int i = 0; i < count; i++) {
@@ -254,6 +274,7 @@ void run_fcfs(Process processes[], int count) {
         current_time++;
     }
 
+    // print the stats
     print_stats(processes, count, current_time);
 }
 

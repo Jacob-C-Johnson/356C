@@ -1,17 +1,21 @@
-CC = gcc
-CFLAGS = -Wall -Wextra -g
-TARGET = scheduler
+CC=gcc
+PROGS=scheduler
+CFLAGS=-std=c99 -Wall -g
+LFLAGS=-lm
 
-all: $(TARGET)
+# Object files needed
+OBJS=scheduler.o my_queue.o
 
-$(TARGET): scheduler.o my_queue.o
-	$(CC) $(CFLAGS) -o $(TARGET) scheduler.o my_queue.o
+all: $(PROGS)
 
 scheduler.o: scheduler.c my_queue.h
 	$(CC) $(CFLAGS) -c scheduler.c
-
+	
 my_queue.o: my_queue.c my_queue.h
 	$(CC) $(CFLAGS) -c my_queue.c
 
+scheduler: $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LFLAGS)
+	
 clean:
-	rm -f *.o $(TARGET)
+	rm -f *.o $(PROGS)

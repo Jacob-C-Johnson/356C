@@ -43,7 +43,8 @@
 30      1       running
 31      1       finished
 
-Simulation starting:
+
+
 0       1       arriving
 0       2       arriving
 0       1       running
@@ -59,36 +60,37 @@ Simulation starting:
 8       2       aging
 8       4       running
 9       4       running
-10      1       aging
 10      4       running
 11      4       finished
-11      2       running
-12      2       running
-13      2       running
-14      3       aging
-14      3       running
+11      1       aging
+11      1       running
+12      1       running
+13      1       running
+14      1       running
+15      3       aging
 15      3       running
-16      3       finished
-16      1       running
-17      1       running
-18      1       running
-19      1       running
-20      1       running
-21      2       aging
+16      2       aging
+16      3       running
+17      3       finished
+17      2       running
+18      2       running
+19      2       running
+20      2       running
 21      2       running
 22      2       running
+23      1       aging
 23      2       running
 24      2       running
 25      2       running
-26      2       running
-27      2       finished
+26      2       finished
+26      1       running
 27      1       running
 28      1       running
 29      1       running
 30      1       running
 31      1       finished
-
+Scheduling Statistics:
 Average waiting time: 11.00
-Average response time: 2.75
+Average response time: 4.25
 Average turnaround time: 18.75
-Average CPU usage: 100.00%
+CPU usage: 100.00%

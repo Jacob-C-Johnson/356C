@@ -206,7 +206,7 @@ void run_pp(Process processes[], int count) {
             printf("%d %d running\n", current_time, processes[current_process_index].pid);
             processes[current_process_index].remaining_time--;
             processes[current_process_index].last_aged_time = -1;
-            processes[current_process_index].last_run_time = current_time;
+            processes[current_process_index].last_run_time = current_time + 1;
         }
 
         current_time++;
